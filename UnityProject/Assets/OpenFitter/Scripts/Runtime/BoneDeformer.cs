@@ -56,9 +56,21 @@ public class BoneDeformer : MonoBehaviour
     // Blender X (Right) -> Unity X (Right)
     // Blender Y (Back) -> Unity -Z (Back)
     // Blender Z (Up) -> Unity Y (Up)
+    // 
+    // Correction: User reported +X movement in Blender resulted in Left movement in Unity.
+    // This implies Blender X maps to Unity -X.
+    // Let's check coordinate systems again.
+    // Blender: X Right, Y Back (or Front depending on view), Z Up.
+    // Unity: X Right, Y Up, Z Forward.
+    // If the character is facing -Y in Blender (standard for many rigs), then X is Right.
+    // If the character is facing +Z in Unity, X is Right.
+    // So X -> X should be correct.
+    // BUT, if the user says it moved Left, then X -> -X is the observed behavior needed.
+    // Let's flip X.
+    // New Mapping: (-x, z, -y)
     private Vector3 ConvertWorldVector(List<float> vec)
     {
-        return new Vector3(vec[0], vec[2], -vec[1]);
+        return new Vector3(-vec[0], vec[2], -vec[1]);
     }
 
     // Blenderのボーンの回転(Euler XYZ Degrees)をUnityの回転に変換
@@ -202,24 +214,11 @@ public class BoneDeformer : MonoBehaviour
         InitialBoneState init = initialStates[bone.name];
 
         // 1. Position
-        // Use head_world_transformed from JSON.
-        // This is the absolute world position in Blender.
-        // Convert to Unity World Space.
-        if (data.head_world_transformed != null)
+        // Use location (World Space Delta) directly.
+        // We don't strictly need head_world_transformed if location is already the delta.
+        // This ensures compatibility even if head_world_transformed is missing in the JSON.
+        if (data.location != null)
         {
-            Vector3 targetWorldPos = ConvertWorldVector(data.head_world_transformed);
-            
-            // The JSON head_world_transformed is the position of the Head.
-            // In Unity, transform.position corresponds to the Head (pivot).
-            // However, we need to align the coordinate systems.
-            // If the model was imported with some offset or scaling, direct mapping might be off.
-            // But let's assume 1:1 mapping for now as per "OpenFitter" nature.
-            
-            // Wait, if the Unity model is scaled or offset at the root, absolute coordinates might be wrong.
-            // Better approach: Calculate the Delta Vector in World Space and add to Initial World Position.
-            // JSON 'location' = head_world_transformed - head_world (in Blender).
-            // So Target = Initial + Delta.
-            
             Vector3 worldDelta = ConvertWorldVector(data.location);
             bone.position = init.worldPosition + worldDelta;
         }
@@ -228,10 +227,7 @@ public class BoneDeformer : MonoBehaviour
         // data.rotation is Euler angles of the Delta Matrix (World Space Delta).
         // R_target = R_delta * R_initial
         Quaternion deltaRot = ConvertRotation(data.rotation);
-        bone.rotation = deltaRot * init.worldRotation; // Order: Apply delta to the initial orientation?
-        // Or init * delta?
-        // If delta is "change in world space", then R_new = Delta * R_old.
-        // Let's try Delta * Init.
+        bone.rotation = deltaRot * init.worldRotation;
 
         // 3. Scale
         // data.scale is the Scale of the Delta Matrix (Accumulated Scale Factor).
