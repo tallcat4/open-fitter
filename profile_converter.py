@@ -71,8 +71,9 @@ def convert_npz_to_json(npz_path):
         print(f"Total Grid Points: {total_points}")
 
         # --- 【重要】ダウンサンプリング (間引き) ---
-        # Unityでリアルタイム動作させるため、制御点は最大でも 4000点 程度に抑える必要がある
-        MAX_CENTERS = 3000 
+        # Unityでリアルタイム動作させるため、制御点は最大でも 500点 程度に抑える必要がある
+        # (経験的に500点程度が最も安定して動作するため、PoC段階ではこの値を採用)
+        MAX_CENTERS = 500 
         
         if total_points > MAX_CENTERS:
             print(f"⚠️ Too many points for RBF centers ({total_points} > {MAX_CENTERS}).")
