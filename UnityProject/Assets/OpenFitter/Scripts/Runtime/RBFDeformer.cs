@@ -33,7 +33,11 @@ public class RBFData
 [ExecuteInEditMode] // エディタ上で動作することを明示
 public class RBFDeformer : MonoBehaviour
 {
-    public string jsonFilePath = "rbf_data.json";
+    [Tooltip("Drag & Drop the RBF JSON file here.")]
+    public TextAsset rbfDataJson;
+    
+    // Legacy support or internal path use
+    [HideInInspector] public string jsonFilePath = "rbf_data.json";
 
     // ターゲット情報の定義
     [System.Serializable]
@@ -142,16 +146,26 @@ public class RBFDeformer : MonoBehaviour
 
     bool LoadRBFData()
     {
-        string path = Path.Combine(Application.dataPath, jsonFilePath);
-        if (!File.Exists(path))
+        string jsonStr = "";
+
+        if (rbfDataJson != null)
         {
-            Debug.LogError("JSON file not found: " + path);
-            return false;
+            jsonStr = rbfDataJson.text;
+        }
+        else
+        {
+            // Fallback to file path logic if TextAsset is not set
+            string path = Path.Combine(Application.dataPath, jsonFilePath);
+            if (!File.Exists(path))
+            {
+                Debug.LogError("RBF Data not found. Please assign a JSON file to the 'Rbf Data Json' field.");
+                return false;
+            }
+            jsonStr = File.ReadAllText(path);
         }
 
         try 
         {
-            string jsonStr = File.ReadAllText(path);
             var data = JsonConvert.DeserializeObject<RBFData>(jsonStr);
 
             this.epsilon = data.epsilon;

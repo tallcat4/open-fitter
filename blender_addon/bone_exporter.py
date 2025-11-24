@@ -1,9 +1,9 @@
 bl_info = {
-    "name": "MochiFitter Bone Exporter",
+    "name": "OpenFitter Bone Exporter",
     "author": "OpenFitter",
     "version": (1, 0),
     "blender": (2, 80, 0),
-    "location": "View3D > Sidebar > MochiFitter",
+    "location": "View3D > Sidebar > OpenFitter",
     "description": "Exports bone pose differences for Unity BoneDeformer.",
     "category": "Import-Export",
 }
@@ -134,16 +134,33 @@ class ExportBonePose(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
-def menu_func_export(self, context):
-    self.layout.operator(ExportBonePose.bl_idname, text="MochiFitter Pose (.json)")
+class OPENFITTER_PT_bone_export(bpy.types.Panel):
+    bl_label = "Bone Pose Export"
+    bl_idname = "OPENFITTER_PT_bone_export"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "OpenFitter"
+    
+    def draw(self, context):
+        layout = self.layout
+        obj = context.active_object
+        
+        layout.label(text="Active Armature: " + (obj.name if obj else "None"))
+        
+        if obj and obj.type == 'ARMATURE':
+            layout.operator(ExportBonePose.bl_idname, icon='EXPORT')
+        else:
+            layout.label(text="Select an Armature", icon='INFO')
 
 def register():
     bpy.utils.register_class(ExportBonePose)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    bpy.utils.register_class(OPENFITTER_PT_bone_export)
+    # bpy.types.TOPBAR_MT_file_export.append(menu_func_export) # Removed menu entry
 
 def unregister():
+    # bpy.types.TOPBAR_MT_file_export.remove(menu_func_export) # Removed menu entry
+    bpy.utils.unregister_class(OPENFITTER_PT_bone_export)
     bpy.utils.unregister_class(ExportBonePose)
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 if __name__ == "__main__":
     register()

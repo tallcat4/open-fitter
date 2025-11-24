@@ -1,9 +1,9 @@
 bl_info = {
-    "name": "MochiFitter RBF Exporter",
+    "name": "OpenFitter RBF Exporter",
     "author": "OpenFitter",
     "version": (1, 0),
     "blender": (2, 80, 0),
-    "location": "View3D > Sidebar > MochiFitter",
+    "location": "View3D > Sidebar > OpenFitter",
     "description": "Exports RBF deformation field from Shape Keys to JSON.",
     "category": "Import-Export",
 }
@@ -361,7 +361,7 @@ class OPENFITTER_PT_rbf_export(bpy.types.Panel):
     bl_idname = "OPENFITTER_PT_rbf_export"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "MochiFitter"
+    bl_category = "OpenFitter"
     
     def draw(self, context):
         layout = self.layout

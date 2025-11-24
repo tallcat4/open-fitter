@@ -21,12 +21,12 @@ using System.IO;
 [CustomEditor(typeof(RBFDeformer))]
 public class RBFDeformerEditor : Editor
 {
-    private SerializedProperty jsonPathProp;
+    private SerializedProperty rbfDataJsonProp;
     private SerializedProperty targetsProp;
 
     private void OnEnable()
     {
-        jsonPathProp = serializedObject.FindProperty("jsonFilePath");
+        rbfDataJsonProp = serializedObject.FindProperty("rbfDataJson");
         targetsProp = serializedObject.FindProperty("targets");
     }
 
@@ -40,34 +40,8 @@ public class RBFDeformerEditor : Editor
         // ----------------------------------------------------
         GUILayout.Label("RBF Data Configuration", EditorStyles.boldLabel);
         
-        EditorGUILayout.PropertyField(jsonPathProp, new GUIContent("JSON Path (Assets Relative)"));
+        EditorGUILayout.PropertyField(rbfDataJsonProp, new GUIContent("RBF Data JSON"));
 
-        // ファイルブラウザボタンを追加
-        if (GUILayout.Button("Browse for RBF JSON File (.json)"))
-        {
-            string selectedPath = EditorUtility.OpenFilePanel(
-                "Select RBF Data JSON", 
-                Application.dataPath, // 初期ディレクトリをAssetsに設定
-                "json"
-            );
-
-            if (!string.IsNullOrEmpty(selectedPath))
-            {
-                // 絶対パスが Assets フォルダ以下にあることを確認
-                if (selectedPath.StartsWith(Application.dataPath))
-                {
-                    // Assets/ を基準とした相対パスに変換
-                    // +1 は Path.DirectorySeparatorChar ('/') をスキップするため
-                    string relativePath = selectedPath.Substring(Application.dataPath.Length + 1);
-                    jsonPathProp.stringValue = relativePath;
-                }
-                else
-                {
-                    Debug.LogError("Error: The selected JSON file must be located within the project's 'Assets' folder structure for consistent loading.");
-                }
-            }
-        }
-        
         // 状態表示
         GUILayout.Space(5);
         EditorGUILayout.LabelField("Target Meshes:", EditorStyles.miniBoldLabel);
