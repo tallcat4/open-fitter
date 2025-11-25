@@ -47,7 +47,7 @@ jobs:
      
       - name: Create ZIP archive
         run: |
-          zip -r ${{ steps.archive.outputs.archive_name }} . -x "*.git*" -x ".github/*" -x "Blender~/*"
+          zip -r ${{ steps.archive.outputs.archive_name }} . -x "*.git*" -x ".github/*"
       
       - name: Create Blender ZIP archive
         run: |
