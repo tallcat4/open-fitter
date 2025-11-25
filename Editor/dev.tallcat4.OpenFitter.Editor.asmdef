@@ -1,14 +1,14 @@
 {
-    "name": "dev.tallcat4.open-fitter",
+    "name": "dev.tallcat4.OpenFitter.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:3456780c4fb2d324ab9c633d6f1b0ddb",
-        "GUID:5718fb738711cd34ea54e9553040911d",
-        "GUID:d8b63aba1907145bea998dd612889d6b",
-        "GUID:2665a8d13d1b3f18800f46e256720795"
+        "GUID:6e9c6119ac4eb334284fb7b4bc6d1f05",
+        "GUID:b906909fcc54f634db50f2cad0f988d9"
     ],
     "includePlatforms": [],
-    "excludePlatforms": [],
+    "excludePlatforms": [
+        "Editor"
+    ],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
