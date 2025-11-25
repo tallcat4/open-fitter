@@ -51,7 +51,9 @@ jobs:
       
       - name: Create Blender ZIP archive
         run: |
-          cd Blender~ && zip -r ../${{ steps.blender_archive.outputs.blender_archive_name }} . && cd ..
+          cp -r Blender~ ${{ env.PACKAGE_NAME }}
+          zip -r ${{ steps.blender_archive.outputs.blender_archive_name }} ${{ env.PACKAGE_NAME }}
+          rm -rf ${{ env.PACKAGE_NAME }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
