@@ -14,6 +14,7 @@ jobs:
       version: ${{ steps.tag.outputs.version }}
       tag_name: ${{ github.event.release.tag_name }}
       archive_name: ${{ steps.archive.outputs.archive_name }}
+      blender_archive_name: ${{ steps.blender_archive.outputs.blender_archive_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,14 +35,23 @@ jobs:
         id: archive
         run: |
           echo "archive_name=${{ env.PACKAGE_NAME }}-${{ steps.tag.outputs.version }}.zip" >> $GITHUB_OUTPUT
-
+      
+      - name: Get Blender archive name
+        id: blender_archive
+        run: |
+          echo "blender_archive_name=${{ env.PACKAGE_NAME }}-blender-${{ steps.tag.outputs.version }}.zip" >> $GITHUB_OUTPUT
+      
       - name: Update package.json URL for release
         run: |
           jq '.url = "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/${{ steps.archive.outputs.archive_name }}"' package.json > tmp.$$.json && mv tmp.$$.json package.json
      
       - name: Create ZIP archive
         run: |
-          zip -r ${{ steps.archive.outputs.archive_name }} . -x "*.git*" -x ".github/*"
+          zip -r ${{ steps.archive.outputs.archive_name }} . -x "*.git*" -x ".github/*" -x "Blender~/*"
+      
+      - name: Create Blender ZIP archive
+        run: |
+          zip -r ${{ steps.blender_archive.outputs.blender_archive_name }} Blender~
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -49,6 +59,7 @@ jobs:
           name: release-assets
           path: |
             ${{ steps.archive.outputs.archive_name }}
+            ${{ steps.blender_archive.outputs.blender_archive_name }}
             package.json
 
   upload:
@@ -67,4 +78,5 @@ jobs:
         with:
           files: |
             ${{ needs.build.outputs.archive_name }}
+            ${{ needs.build.outputs.blender_archive_name }}
             package.json
