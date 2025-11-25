@@ -47,11 +47,13 @@ jobs:
      
       - name: Create ZIP archive
         run: |
-          zip -r ${{ steps.archive.outputs.archive_name }} . -x "*.git*" -x ".github/*" -x "Blender~/*"
+          zip -r ${{ steps.archive.outputs.archive_name }} . -x "*.git*" -x ".github/*"
       
       - name: Create Blender ZIP archive
         run: |
-          zip -r ${{ steps.blender_archive.outputs.blender_archive_name }} Blender~
+          cp -r Blender~ ${{ env.PACKAGE_NAME }}
+          zip -r ${{ steps.blender_archive.outputs.blender_archive_name }} ${{ env.PACKAGE_NAME }}
+          rm -rf ${{ env.PACKAGE_NAME }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
