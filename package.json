@@ -5,10 +5,7 @@
   "description": "An open-source avatar clothing fitting tool compatible with the \"MochiFitter\" workflow. Based on the GPL-3 core logic released by Nine Gates, OpenFitter provides a complete pipeline for transferring clothing between different avatar shapes using RBF (Radial Basis Function) deformation and Bone Pose transfer.",
   "unity": "2022.3",
   "unityRelease": "22f1",
-  "dependencies": {
-    "com.vrchat.base" : "3.9.0",
-    "com.vrchat.avatars" : "3.9.0"
-  },
+  "dependencies": {},
   "keywords": [],
   "author": {
     "name": "tallcat4",
