@@ -1,0 +1,25 @@
+{
+  "name": "dev.tallcat4.open-fitter",
+  "version": "0.0.1",
+  "displayName": "Open Fitter",
+  "description": "An open-source avatar clothing fitting tool compatible with the \"MochiFitter\" workflow. Based on the GPL-3 core logic released by Nine Gates, OpenFitter provides a complete pipeline for transferring clothing between different avatar shapes using RBF (Radial Basis Function) deformation and Bone Pose transfer.",
+  "unity": "2022.3",
+  "unityRelease": "22f1",
+  "dependencies": {
+    "com.unity.mathematics" : "1.2.6",
+    "com.unity.burst" : "1.8.25"
+  },
+  "keywords": [],
+  "author": {
+    "name": "tallcat4",
+    "email": "none@example.com",
+    "url": "https://github.com/tallcat4/open-fitter"
+  },
+  "documentationUrl": "https://github.com/tallcat4/open-fitter/blob/master/README.md",
+  "vpmDependencies" : {
+    "com.vrchat.base" : ">=3.7.0",
+    "com.vrchat.avatars" : ">=3.7.0"
+  },
+  "url": "https://github.com/tallcat4/open-fitter",
+  "license": "GNU GPL-3.0"
+}
