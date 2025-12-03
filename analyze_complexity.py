@@ -29,20 +29,25 @@ def main():
         return
 
     data = []
-    files = [f for f in os.listdir(TARGET_DIR) if f.endswith('.py')]
+    files = []
+
+    for root, _, filenames in os.walk(TARGET_DIR):
+        for filename in filenames:
+            if filename.endswith('.py'):
+                files.append(os.path.join(root, filename))
 
     print(f"Analyzing complexity for {len(files)} files...")
 
-    for f in files:
-        path = os.path.join(TARGET_DIR, f)
+    for path in files:
         loc, fan_out = analyze_file(path)
         
         # Heuristic Score: 行数 + (依存数 * 5)
         # 依存が多いほど複雑さは跳ね上がるため重み付け
         score = loc + (fan_out * 5)
         
+        rel_name = os.path.splitext(os.path.relpath(path, TARGET_DIR))[0]
         data.append({
-            "File": f[:-3],
+            "File": rel_name,
             "LOC": loc,
             "Imports": fan_out,
             "Score": score

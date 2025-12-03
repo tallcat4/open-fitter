@@ -86,32 +86,40 @@ def main():
          print(f"Directory '{target_dir}' not found.")
          return
 
-    files = [f for f in os.listdir(target_dir) if f.endswith('.py')]
-    module_map = {f[:-3]: f for f in files} # symbol -> filename (簡易的にmodule名=symbolと仮定)
+    files = []
+    for root, _, filenames in os.walk(target_dir):
+        for filename in filenames:
+            if filename.endswith('.py'):
+                files.append(os.path.join(root, filename))
+
+    module_map = {}
+    for path in files:
+        rel_path = os.path.relpath(path, target_dir)
+        module_name = os.path.splitext(rel_path)[0].replace(os.sep, '.')
+        module_map[module_name] = path
     
     # 1. 定義と行数を収集
     symbol_info = {} # symbol -> {'file': file, 'lines': n}
     symbol_to_module = {} # symbol -> module_name
     
     print("Parsing files...")
-    for module_name, filename in module_map.items():
-        path = os.path.join(target_dir, filename)
+    for module_name, path in module_map.items():
         defs = get_definitions_and_lines(path)
         
         # ファイル自体が1つの関数/クラスを表している場合（splitterの仕様による）
         # ファイル内のトップレベル定義だけでなく、モジュール名そのものもシンボルとして扱う
-        symbol_info[module_name] = {'file': filename, 'lines': sum(defs.values()) if defs else 0}
+        rel_display = os.path.relpath(path, target_dir)
+        symbol_info[module_name] = {'file': rel_display, 'lines': sum(defs.values()) if defs else 0}
         symbol_to_module[module_name] = module_name
         
         for d, lines in defs.items():
-            symbol_info[d] = {'file': filename, 'lines': lines}
+            symbol_info[d] = {'file': rel_display, 'lines': lines}
             symbol_to_module[d] = module_name
 
     # 2. 依存グラフ構築
     graph = defaultdict(set)
     
-    for module_name, filename in module_map.items():
-        path = os.path.join(target_dir, filename)
+    for module_name, path in module_map.items():
         calls = get_calls(path)
         
         for call in calls:

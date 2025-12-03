@@ -4,7 +4,7 @@ import collections
 
 TARGET_DIR = './extracted'
 
-def get_imports(file_path, all_modules):
+def get_imports(file_path, module_names, short_name_map):
     """ファイル内のimport文から、抽出済みモジュールへの参照を取得"""
     imports = set()
     try:
@@ -16,32 +16,55 @@ def get_imports(file_path, all_modules):
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                name = alias.name.split('.')[0]
-                if name in all_modules: imports.add(name)
+                imports.update(resolve_import(alias.name, module_names, short_name_map))
         elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                module_name = node.module.lstrip('.')
-                # 相対インポートやパッケージ名を考慮
-                parts = module_name.split('.')
-                name = parts[0] 
-                if name in all_modules:
-                    imports.add(name)
-                
-                # from module import func の func がファイル名(モジュール)である可能性
-                # (splitterの仕様で 関数名=ファイル名 になっている場合が多い)
-                for alias in node.names:
-                     if alias.name in all_modules:
-                         imports.add(alias.name)
+            module_name = node.module.lstrip('.') if node.module else ''
+
+            if module_name:
+                imports.update(resolve_import(module_name, module_names, short_name_map))
+
+            for alias in node.names:
+                combined = f"{module_name}.{alias.name}" if module_name else alias.name
+                imports.update(resolve_import(combined, module_names, short_name_map))
 
     return imports
+
+def resolve_import(name, module_names, short_name_map):
+    """Resolve import string to known module names (full dotted path)."""
+    candidates = set()
+    if not name:
+        return candidates
+
+    normalized = name.replace('/', '.').strip('. ')
+    if normalized in module_names:
+        candidates.add(normalized)
+
+    short = normalized.split('.')[-1]
+    if short in short_name_map:
+        candidates.update(short_name_map[short])
+
+    return candidates
+
 
 def main():
     if not os.path.exists(TARGET_DIR):
         print("Directory not found.")
         return
 
-    files = [f for f in os.listdir(TARGET_DIR) if f.endswith('.py')]
-    module_names = {f[:-3] for f in files} # 拡張子なし
+    files = []
+    for root, _, filenames in os.walk(TARGET_DIR):
+        for filename in filenames:
+            if filename.endswith('.py'):
+                files.append(os.path.join(root, filename))
+
+    module_names = set()
+    short_name_map = collections.defaultdict(set)
+    for path in files:
+        rel_path = os.path.relpath(path, TARGET_DIR)
+        module_name = os.path.splitext(rel_path)[0].replace(os.sep, '.')
+        module_names.add(module_name)
+        short = os.path.splitext(os.path.basename(rel_path))[0]
+        short_name_map[short].add(module_name)
     
     # 逆参照マップ (誰が誰に呼ばれているか)
     # referenced_by[callee] = [caller1, caller2, ...]
@@ -50,11 +73,11 @@ def main():
     print(f"Analyzing usage for {len(files)} files...")
 
     # 全ファイルを走査して、「誰が誰を呼んでいるか」を調べる
-    for caller_file in files:
-        caller_name = caller_file[:-3]
-        path = os.path.join(TARGET_DIR, caller_file)
+    for path in files:
+        rel_path = os.path.relpath(path, TARGET_DIR)
+        caller_name = os.path.splitext(rel_path)[0].replace(os.sep, '.')
         
-        dependencies = get_imports(path, module_names)
+        dependencies = get_imports(path, module_names, short_name_map)
         
         for callee in dependencies:
             if callee != caller_name: # 自分自身への再帰はカウントしない
