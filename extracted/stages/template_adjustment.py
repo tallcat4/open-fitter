@@ -1,6 +1,6 @@
+import math
 import os
 import sys
-import math
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -15,11 +15,11 @@ for _p in (_PARENT_DIR, _GRANDPARENT_DIR):
     if _p not in sys.path:
         sys.path.append(_p)
 
-from io_utils.import_base_fbx import import_base_fbx
-from io_utils.load_vertex_group import load_vertex_group
 from blender_utils.transfer_weights_from_nearest_vertex import (
     transfer_weights_from_nearest_vertex,
 )
+from io_utils.import_base_fbx import import_base_fbx
+from io_utils.load_vertex_group import load_vertex_group
 
 
 class TemplateAdjustmentStage:

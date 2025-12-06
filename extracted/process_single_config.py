@@ -4,49 +4,12 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import bpy
 from processing_context import ProcessingContext
-from add_clothing_pose_from_json import add_clothing_pose_from_json
-from add_pose_from_json import add_pose_from_json
-from algo_utils.create_hinge_bone_group import create_hinge_bone_group
-from algo_utils.remove_empty_vertex_groups import remove_empty_vertex_groups
-from apply_blendshape_deformation_fields import apply_blendshape_deformation_fields
-from blender_utils.apply_bone_name_conversion import apply_bone_name_conversion
-from blender_utils.create_deformation_mask import create_deformation_mask
-from blender_utils.create_overlapping_vertices_attributes import (
-    create_overlapping_vertices_attributes,
-)
-from blender_utils.merge_auxiliary_to_humanoid_weights import (
-    merge_auxiliary_to_humanoid_weights,
-)
-from blender_utils.process_bone_weight_consolidation import (
-    process_bone_weight_consolidation,
-)
-from blender_utils.process_clothing_avatar import process_clothing_avatar
-from blender_utils.propagate_bone_weights import propagate_bone_weights
-from blender_utils.reset_shape_keys import reset_shape_keys
-from blender_utils.setup_weight_transfer import setup_weight_transfer
-from blender_utils.subdivide_breast_faces import subdivide_breast_faces
-from blender_utils.subdivide_long_edges import subdivide_long_edges
-from blender_utils.triangulate_mesh import triangulate_mesh
-from common_utils.rename_shape_keys_from_mappings import rename_shape_keys_from_mappings
-from common_utils.truncate_long_shape_key_names import truncate_long_shape_key_names
-from io_utils.import_base_fbx import import_base_fbx
-from io_utils.load_base_file import load_base_file
-from io_utils.load_cloth_metadata import load_cloth_metadata
-from io_utils.load_mesh_material_data import load_mesh_material_data
-from is_A_pose import is_A_pose
-from math_utils.normalize_bone_weights import normalize_bone_weights
-from math_utils.normalize_clothing_bone_names import normalize_clothing_bone_names
-from math_utils.normalize_vertex_weights import normalize_vertex_weights
-from process_base_avatar import process_base_avatar
-from process_mesh_with_connected_components_inline import (
-    process_mesh_with_connected_components_inline,
-)
-from update_base_avatar_weights import update_base_avatar_weights
 from stages.asset_preparation import AssetPreparationStage
-from stages.template_adjustment import TemplateAdjustmentStage
 from stages.mesh_preparation import MeshPreparationStage
-from stages.weight_transfer import WeightTransferStage
 from stages.scene_finalization import SceneFinalizationStage
+from stages.template_adjustment import TemplateAdjustmentStage
+from stages.weight_transfer import WeightTransferStage
+
 
 class SingleConfigProcessor:
     def __init__(self, args, config_pair, pair_index, total_pairs, overall_start_time):

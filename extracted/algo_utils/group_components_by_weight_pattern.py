@@ -3,9 +3,10 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+from dataclasses import dataclass
+
 import bmesh
 import bpy
-from dataclasses import dataclass
 from algo_utils.find_connected_components import find_connected_components
 from algo_utils.get_humanoid_and_auxiliary_bone_groups import (
     get_humanoid_and_auxiliary_bone_groups,
