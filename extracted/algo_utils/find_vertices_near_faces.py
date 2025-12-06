@@ -10,6 +10,138 @@ from math_utils.barycentric_coords_from_point import barycentric_coords_from_poi
 from mathutils.bvhtree import BVHTree
 
 
+class _FindVerticesNearFacesContext:
+    """State holder for vertex search and weight transfer."""
+
+    def __init__(
+        self,
+        base_mesh,
+        target_mesh,
+        vertex_group_name,
+        max_distance,
+        max_angle_degrees,
+        use_all_faces,
+        smooth_repeat,
+    ):
+        self.base_mesh = base_mesh
+        self.target_mesh = target_mesh
+        self.vertex_group_name = vertex_group_name
+        self.max_distance = max_distance
+        self.max_angle_degrees = max_angle_degrees
+        self.use_all_faces = use_all_faces
+        self.smooth_repeat = smooth_repeat
+
+        self.selection_state = None
+        self.temp_base_mesh = None
+        self.temp_base_mesh_removed = False
+        self.depsgraph = None
+        self.base_mesh_data = None
+        self.base_world_matrix = None
+
+    def run(self):
+        if not self._validate_inputs():
+            return
+
+        self.selection_state = _capture_selection_state()
+        print(f"ベースメッシュ '{self.base_mesh.name}' の頂点グループ '{self.vertex_group_name}' に属する面を分析中...")
+
+        print("ベースメッシュを複製して三角面化中...")
+        self._prepare_base_mesh_copy()
+
+        try:
+            temp_base_vertex_group = _find_vertex_group(self.temp_base_mesh, self.vertex_group_name)
+            if not temp_base_vertex_group:
+                print(f"エラー: 複製メッシュに頂点グループ '{self.vertex_group_name}' が見つかりません")
+                return
+
+            base_vertices_in_group = _collect_vertices_in_group(self.base_mesh_data, temp_base_vertex_group.index)
+            print(f"頂点グループに属する頂点数: {len(base_vertices_in_group)}")
+
+            target_face_indices = _select_target_faces(self.base_mesh_data, base_vertices_in_group, self.use_all_faces)
+            print(f"条件を満たす面数: {len(target_face_indices)} (すべて三角形)")
+
+            if not target_face_indices:
+                print("警告: 条件を満たす面が見つかりません")
+                return
+
+            target_vertex_group = _ensure_target_vertex_group(self.target_mesh, self.vertex_group_name)
+
+            evaluated_target_mesh = self.target_mesh.evaluated_get(self.depsgraph)
+            target_mesh_data = evaluated_target_mesh.data
+            target_world_matrix = evaluated_target_mesh.matrix_world
+
+            vertex_interpolated_weights, found_vertices = _build_and_interpolate(
+                self.base_mesh_data,
+                self.base_world_matrix,
+                target_face_indices,
+                target_mesh_data,
+                target_world_matrix,
+                self.max_distance,
+                self.max_angle_degrees,
+                temp_base_vertex_group,
+            )
+
+            if vertex_interpolated_weights is None:
+                return
+
+            _apply_weights_to_target(target_mesh_data, target_vertex_group, vertex_interpolated_weights)
+
+            self._post_process(found_vertices)
+            self._remove_temp_base_mesh(log=True)
+        finally:
+            self._cleanup()
+
+    def _validate_inputs(self):
+        if not self.base_mesh or self.base_mesh.type != 'MESH':
+            print("エラー: ベースメッシュが指定されていないか、メッシュではありません")
+            return False
+
+        if not self.target_mesh or self.target_mesh.type != 'MESH':
+            print("エラー: ターゲットメッシュが指定されていないか、メッシュではありません")
+            return False
+
+        if not _find_vertex_group(self.base_mesh, self.vertex_group_name):
+            print(f"エラー: ベースメッシュに頂点グループ '{self.vertex_group_name}' が見つかりません")
+            return False
+
+        return True
+
+    def _prepare_base_mesh_copy(self):
+        self.temp_base_mesh, self.depsgraph, self.base_mesh_data, self.base_world_matrix = _duplicate_and_triangulate_base(self.base_mesh)
+
+    def _post_process(self, found_vertices):
+        bpy.ops.object.select_all(action='DESELECT')
+        self.target_mesh.select_set(True)
+        bpy.context.view_layer.objects.active = self.target_mesh
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+
+        _set_active_vertex_group(self.target_mesh, self.vertex_group_name)
+
+        bpy.ops.object.mode_set(mode='WEIGHT_PAINT')
+
+        if self.smooth_repeat > 0:
+            bpy.ops.object.vertex_group_smooth(factor=0.5, repeat=self.smooth_repeat, expand=0.5)
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        print(f"作成された頂点グループ: {self.vertex_group_name}")
+        print(f"条件を満たした頂点数: {len(found_vertices)}")
+        print(f"最大距離: {self.max_distance}")
+
+    def _remove_temp_base_mesh(self, log=False):
+        if self.temp_base_mesh and not self.temp_base_mesh_removed:
+            if log:
+                print(f"一時メッシュ '{self.temp_base_mesh.name}' を削除中...")
+            bpy.data.objects.remove(self.temp_base_mesh, do_unlink=True)
+            self.temp_base_mesh_removed = True
+
+    def _cleanup(self):
+        self._remove_temp_base_mesh(log=False)
+        if self.selection_state:
+            _restore_selection_state(self.selection_state)
+
+
 def _capture_selection_state():
     return {
         "active": bpy.context.active_object,
@@ -226,88 +358,15 @@ def find_vertices_near_faces(base_mesh, target_mesh, vertex_group_name, max_dist
         use_all_faces (bool): すべての面を使用するかどうか
         smooth_repeat (int): スムージングの繰り返し回数
     """
-    
-    if not base_mesh or base_mesh.type != 'MESH':
-        print("エラー: ベースメッシュが指定されていないか、メッシュではありません")
-        return
 
-    if not target_mesh or target_mesh.type != 'MESH':
-        print("エラー: ターゲットメッシュが指定されていないか、メッシュではありません")
-        return
+    ctx = _FindVerticesNearFacesContext(
+        base_mesh,
+        target_mesh,
+        vertex_group_name,
+        max_distance,
+        max_angle_degrees,
+        use_all_faces,
+        smooth_repeat,
+    )
 
-    base_vertex_group = _find_vertex_group(base_mesh, vertex_group_name)
-    if not base_vertex_group:
-        print(f"エラー: ベースメッシュに頂点グループ '{vertex_group_name}' が見つかりません")
-        return
-
-    selection_state = _capture_selection_state()
-    print(f"ベースメッシュ '{base_mesh.name}' の頂点グループ '{vertex_group_name}' に属する面を分析中...")
-
-    print("ベースメッシュを複製して三角面化中...")
-    temp_base_mesh, depsgraph, base_mesh_data, base_world_matrix = _duplicate_and_triangulate_base(base_mesh)
-    temp_base_mesh_removed = False
-
-    try:
-        temp_base_vertex_group = _find_vertex_group(temp_base_mesh, vertex_group_name)
-        if not temp_base_vertex_group:
-            print(f"エラー: 複製メッシュに頂点グループ '{vertex_group_name}' が見つかりません")
-            return
-
-        base_vertices_in_group = _collect_vertices_in_group(base_mesh_data, temp_base_vertex_group.index)
-        print(f"頂点グループに属する頂点数: {len(base_vertices_in_group)}")
-
-        target_face_indices = _select_target_faces(base_mesh_data, base_vertices_in_group, use_all_faces)
-        print(f"条件を満たす面数: {len(target_face_indices)} (すべて三角形)")
-
-        if not target_face_indices:
-            print("警告: 条件を満たす面が見つかりません")
-            return
-
-        target_vertex_group = _ensure_target_vertex_group(target_mesh, vertex_group_name)
-
-        evaluated_target_mesh = target_mesh.evaluated_get(depsgraph)
-        target_mesh_data = evaluated_target_mesh.data
-        target_world_matrix = evaluated_target_mesh.matrix_world
-
-        vertex_interpolated_weights, found_vertices = _build_and_interpolate(
-            base_mesh_data,
-            base_world_matrix,
-            target_face_indices,
-            target_mesh_data,
-            target_world_matrix,
-            max_distance,
-            max_angle_degrees,
-            temp_base_vertex_group,
-        )
-
-        if vertex_interpolated_weights is None:
-            return
-
-        _apply_weights_to_target(target_mesh_data, target_vertex_group, vertex_interpolated_weights)
-
-        bpy.ops.object.select_all(action='DESELECT')
-        target_mesh.select_set(True)
-        bpy.context.view_layer.objects.active = target_mesh
-
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-
-        _set_active_vertex_group(target_mesh, vertex_group_name)
-
-        bpy.ops.object.mode_set(mode='WEIGHT_PAINT')
-
-        if smooth_repeat > 0:
-            bpy.ops.object.vertex_group_smooth(factor=0.5, repeat=smooth_repeat, expand=0.5)
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        print(f"一時メッシュ '{temp_base_mesh.name}' を削除中...")
-        bpy.data.objects.remove(temp_base_mesh, do_unlink=True)
-        temp_base_mesh_removed = True
-
-        print(f"作成された頂点グループ: {vertex_group_name}")
-        print(f"条件を満たした頂点数: {len(found_vertices)}")
-        print(f"最大距離: {max_distance}")
-    finally:
-        if not temp_base_mesh_removed:
-            bpy.data.objects.remove(temp_base_mesh, do_unlink=True)
-        _restore_selection_state(selection_state)
+    return ctx.run()
