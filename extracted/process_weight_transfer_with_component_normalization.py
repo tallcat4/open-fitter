@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import bpy
-from algo_utils.group_components_by_weight_pattern import (
+from algo_utils.component_utils import (
     group_components_by_weight_pattern,
 )
 from process_weight_transfer import process_weight_transfer
