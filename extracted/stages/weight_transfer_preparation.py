@@ -11,7 +11,7 @@ for _p in (_PARENT_DIR,):
     if _p not in sys.path:
         sys.path.append(_p)
 
-from algo_utils.find_containing_objects import find_containing_objects
+from algo_utils.search_utils import find_containing_objects
 from algo_utils.mesh_topology_utils import find_vertices_near_faces
 from algo_utils.vertex_group_utils import process_humanoid_vertex_groups
 from blender_utils.armature_utils import (
