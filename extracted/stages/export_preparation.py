@@ -15,7 +15,7 @@ for _p in (_PARENT_DIR,):
     if _p not in sys.path:
         sys.path.append(_p)
 
-from blender_utils.merge_and_clean_generated_shapekeys import (
+from blender_utils.blendshape_utils import (
     merge_and_clean_generated_shapekeys,
 )
 from blender_utils.bone_utils import round_bone_coordinates
