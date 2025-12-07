@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import bpy
 import numpy as np
-from algo_utils.check_uniform_weights import check_uniform_weights
+from algo_utils.vertex_group_utils import check_uniform_weights
 from algo_utils.find_connected_components import find_connected_components
 from blender_utils.generate_weight_hash import generate_weight_hash
 from math_utils.geometry_utils import calculate_component_size

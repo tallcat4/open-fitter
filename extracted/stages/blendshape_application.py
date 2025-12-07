@@ -11,7 +11,7 @@ for _p in (_PARENT_DIR,):
     if _p not in sys.path:
         sys.path.append(_p)
 
-from algo_utils.remove_empty_vertex_groups import remove_empty_vertex_groups
+from algo_utils.vertex_group_utils import remove_empty_vertex_groups
 from apply_blendshape_deformation_fields import apply_blendshape_deformation_fields
 from blender_utils.reset_utils import reset_shape_keys
 from math_utils.weight_utils import normalize_vertex_weights

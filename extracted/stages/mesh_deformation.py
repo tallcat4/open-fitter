@@ -11,7 +11,7 @@ for _p in (_PARENT_DIR,):
     if _p not in sys.path:
         sys.path.append(_p)
 
-from algo_utils.remove_empty_vertex_groups import remove_empty_vertex_groups
+from algo_utils.vertex_group_utils import remove_empty_vertex_groups
 from blender_utils.create_deformation_mask import create_deformation_mask
 from blender_utils.merge_auxiliary_to_humanoid_weights import (
     merge_auxiliary_to_humanoid_weights,

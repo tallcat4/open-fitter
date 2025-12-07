@@ -8,8 +8,8 @@ import time
 import bpy
 import mathutils
 import numpy as np
-from algo_utils.apply_max_filter_to_vertex_group import apply_max_filter_to_vertex_group
-from algo_utils.apply_smoothing_to_vertex_group import apply_smoothing_to_vertex_group
+from algo_utils.vertex_group_utils import apply_max_filter_to_vertex_group
+from algo_utils.vertex_group_utils import apply_smoothing_to_vertex_group
 from blender_utils.clear_mesh_cache import clear_mesh_cache
 from blender_utils.get_evaluated_mesh import get_evaluated_mesh
 from mathutils import Vector

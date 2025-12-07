@@ -1,7 +1,7 @@
 import os
 import sys
 
-from algo_utils.get_vertex_groups_and_weights import get_vertex_groups_and_weights
+from algo_utils.vertex_group_utils import get_vertex_groups_and_weights
 from mathutils import Matrix
 import bpy
 import numpy as np

@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
-from algo_utils.get_vertex_groups_and_weights import get_vertex_groups_and_weights
+from algo_utils.vertex_group_utils import get_vertex_groups_and_weights
 from mathutils import Matrix
 
 
