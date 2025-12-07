@@ -10,8 +10,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from find_intersecting_faces_bvh import find_intersecting_faces_bvh
-from io_utils.restore_shape_key_state import restore_shape_key_state
-from io_utils.save_shape_key_state import save_shape_key_state
+from io_utils.shape_key_state import restore_shape_key_state, save_shape_key_state
 from process_field_deformation import process_field_deformation
 
 

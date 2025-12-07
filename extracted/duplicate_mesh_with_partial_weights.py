@@ -7,13 +7,13 @@ import bpy
 from blender_utils.apply_modifiers_keep_shapekeys_with_temp import (
     apply_modifiers_keep_shapekeys_with_temp,
 )
+from blender_utils.armature_modifier_utils import (
+    restore_armature_modifier,
+    set_armature_modifier_visibility,
+    store_armature_modifier_settings,
+)
 from blender_utils.is_left_side_bone import is_left_side_bone
 from blender_utils.is_right_side_bone import is_right_side_bone
-from blender_utils.set_armature_modifier_visibility import (
-    set_armature_modifier_visibility,
-)
-from io_utils.restore_armature_modifier import restore_armature_modifier
-from io_utils.store_armature_modifier_settings import store_armature_modifier_settings
 
 
 def duplicate_mesh_with_partial_weights(base_mesh: bpy.types.Object, base_avatar_data: dict) -> tuple:

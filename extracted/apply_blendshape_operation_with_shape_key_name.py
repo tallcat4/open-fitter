@@ -4,8 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from apply_blendshape_operation import apply_blendshape_operation
-from io_utils.restore_shape_key_state import restore_shape_key_state
-from io_utils.save_shape_key_state import save_shape_key_state
+from io_utils.shape_key_state import restore_shape_key_state, save_shape_key_state
 
 
 def apply_blendshape_operation_with_shape_key_name(target_obj, operation, target_shape_key_name, rigid_transformation=False):

@@ -10,11 +10,8 @@ import numpy as np
 from blender_utils.apply_modifiers_keep_shapekeys_with_temp import (
     apply_modifiers_keep_shapekeys_with_temp,
 )
-from blender_utils.set_armature_modifier_visibility import (
-    set_armature_modifier_visibility,
-)
-from io_utils.restore_shape_key_state import restore_shape_key_state
-from io_utils.save_shape_key_state import save_shape_key_state
+from blender_utils.armature_modifier_utils import set_armature_modifier_visibility
+from io_utils.shape_key_state import restore_shape_key_state, save_shape_key_state
 
 
 def generate_temp_shapekeys_for_weight_transfer(obj: bpy.types.Object, armature_obj: bpy.types.Object, avatar_data: dict, is_A_pose: bool) -> None:

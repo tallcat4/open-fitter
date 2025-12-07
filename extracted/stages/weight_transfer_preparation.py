@@ -14,13 +14,13 @@ for _p in (_PARENT_DIR,):
 from algo_utils.find_containing_objects import find_containing_objects
 from algo_utils.find_vertices_near_faces import find_vertices_near_faces
 from algo_utils.process_humanoid_vertex_groups import process_humanoid_vertex_groups
-from blender_utils.process_missing_bone_weights import process_missing_bone_weights
-from blender_utils.set_armature_modifier_target_armature import (
+from blender_utils.armature_modifier_utils import (
+    restore_armature_modifier,
     set_armature_modifier_target_armature,
-)
-from blender_utils.set_armature_modifier_visibility import (
     set_armature_modifier_visibility,
+    store_armature_modifier_settings,
 )
+from blender_utils.process_missing_bone_weights import process_missing_bone_weights
 from blender_utils.transfer_weights_from_nearest_vertex import (
     transfer_weights_from_nearest_vertex,
 )
@@ -29,8 +29,6 @@ from generate_temp_shapekeys_for_weight_transfer import (
     generate_temp_shapekeys_for_weight_transfer,
 )
 from io_utils.load_vertex_group import load_vertex_group
-from io_utils.restore_armature_modifier import restore_armature_modifier
-from io_utils.store_armature_modifier_settings import store_armature_modifier_settings
 
 
 class WeightTransferPreparationStage:
