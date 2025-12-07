@@ -17,8 +17,6 @@ from apply_distance_normal_based_smoothing import apply_distance_normal_based_sm
 from blender_utils.adjust_hand_weights import adjust_hand_weights
 from blender_utils.build_bone_maps import build_bone_maps
 from blender_utils.create_blendshape_mask import create_blendshape_mask
-from blender_utils.get_vertex_weight_safe import get_vertex_weight_safe
-from blender_utils.merge_weights_to_parent import merge_weights_to_parent
 from blender_utils.propagate_weights_to_side_vertices import (
     propagate_weights_to_side_vertices,
 )
@@ -32,6 +30,7 @@ from io_utils.restore_weights import restore_weights
 from io_utils.save_shape_key_state import save_shape_key_state
 from io_utils.store_weights import store_weights
 from stages.compute_non_humanoid_masks import compute_non_humanoid_masks
+from stages.merge_added_groups import merge_added_groups
 
 
 class WeightTransferContext:
@@ -495,116 +494,7 @@ class WeightTransferContext:
         compute_non_humanoid_masks(self)
 
     def merge_added_groups(self):
-        group_merge_time_start = time.time()
-        max_iterations = 5
-        iteration = 0
-        added_groups = set(self.added_groups)
-        while added_groups and iteration < max_iterations:
-            changed = False
-            remaining_groups = set()
-            print(f"  反復処理: {iteration}")
-            for group_name in added_groups:
-                print(f"  グループ名: {group_name}")
-                if group_name not in self.target_obj.vertex_groups:
-                    print(f"  {group_name} は削除されています。スキップします")
-                    continue
-                group = self.target_obj.vertex_groups[group_name]
-                verts_with_weight = []
-                for v in self.target_obj.data.vertices:
-                    weight = get_vertex_weight_safe(self.target_obj, group, v.index)
-                    if weight > 0:
-                        verts_with_weight.append(v)
-                print(f"  ウェイトを持つ頂点数: {len(verts_with_weight)}")
-                if len(verts_with_weight) == 0:
-                    print(f"  {group_name} は空: スキップします")
-                    continue
-                if group_name in self.bone_to_humanoid:
-                    humanoid_group_name = self.bone_to_humanoid[group_name]
-                    if "LeftToes" in self.humanoid_to_bone and self.humanoid_to_bone["LeftToes"] in self.original_groups:
-                        if humanoid_group_name in self.left_foot_finger_humanoid_bones:
-                            merge_weights_to_parent(self.target_obj, group_name, self.humanoid_to_bone["LeftToes"])
-                            changed = True
-                            continue
-                    if "RightToes" in self.humanoid_to_bone and self.humanoid_to_bone["RightToes"] in self.original_groups:
-                        if humanoid_group_name in self.right_foot_finger_humanoid_bones:
-                            merge_weights_to_parent(self.target_obj, group_name, self.humanoid_to_bone["RightToes"])
-                            changed = True
-                            continue
-
-                existing_groups = set()
-                for vert in verts_with_weight:
-                    for g in vert.groups:
-                        g_name = self.target_obj.vertex_groups[g.group].name
-                        if g_name in self.bone_groups and g_name in self.original_groups and g.weight > 0:
-                            existing_groups.add(g_name)
-                print(f"  既存グループ: {existing_groups}")
-                if len(existing_groups) == 1:
-                    merge_weights_to_parent(self.target_obj, group_name, list(existing_groups)[0])
-                    changed = True
-                elif len(existing_groups) == 0:
-                    bm = bmesh.new()
-                    bm.from_mesh(self.target_obj.data)
-                    bm.verts.ensure_lookup_table()
-                    visited_verts = set(vert.index for vert in verts_with_weight)
-                    queue = deque(verts_with_weight)
-                    while queue:
-                        vert = queue.popleft()
-                        for edge in bm.verts[vert.index].link_edges:
-                            other_vert = edge.other_vert(bm.verts[vert.index])
-                            if other_vert.index not in visited_verts:
-                                visited_verts.add(other_vert.index)
-                                for g in self.target_obj.data.vertices[other_vert.index].groups:
-                                    if self.target_obj.vertex_groups[g.group].name in self.bone_groups and g.weight > 0:
-                                        existing_groups.add(self.target_obj.vertex_groups[g.group].name)
-                                        if len(existing_groups) > 1:
-                                            break
-                                if len(existing_groups) == 1:
-                                    merge_weights_to_parent(self.target_obj, group_name, existing_groups.pop())
-                                    changed = True
-                                    break
-                                queue.append(self.target_obj.data.vertices[other_vert.index])
-                    bm.free()
-                    print(f"  隣接探索後の既存グループ: {existing_groups}")
-
-                if len(existing_groups) != 1:
-                    remaining_groups.add(group_name)
-
-            if not changed:
-                break
-            added_groups = remaining_groups
-            iteration += 1
-        group_merge_time = time.time() - group_merge_time_start
-        print(f"  グループ統合処理: {group_merge_time:.2f}秒")
-
-        aux_bone_time_start = time.time()
-        for group_name in list(added_groups):
-            for aux_set in self.base_avatar_data.get("auxiliaryBones", []):
-                if group_name in aux_set["auxiliaryBones"]:
-                    humanoid_bone = aux_set["humanoidBoneName"]
-                    if humanoid_bone in self.humanoid_to_bone and self.humanoid_to_bone[humanoid_bone] in self.bone_groups:
-                        merge_weights_to_parent(self.target_obj, group_name, self.humanoid_to_bone[humanoid_bone])
-                        try:
-                            added_groups.remove(group_name)
-                        except KeyError:
-                            pass
-                        break
-
-        for group_name in added_groups:
-            if group_name not in self.target_obj.vertex_groups:
-                continue
-            group = self.target_obj.vertex_groups[group_name]
-            for vert in self.target_obj.data.vertices:
-                weight = get_vertex_weight_safe(self.target_obj, group, vert.index)
-                if weight > 0:
-                    for orig_group_name, orig_weight in self.original_humanoid_weights[vert.index].items():
-                        if orig_group_name in self.target_obj.vertex_groups:
-                            self.target_obj.vertex_groups[orig_group_name].add([vert.index], orig_weight * weight, "ADD")
-
-        for group_name in added_groups:
-            if group_name in self.target_obj.vertex_groups:
-                self.target_obj.vertex_groups.remove(self.target_obj.vertex_groups[group_name])
-        aux_bone_time = time.time() - aux_bone_time_start
-        print(f"  補助ボーン処理: {aux_bone_time:.2f}秒")
+        merge_added_groups(self)
 
     def store_intermediate_results(self):
         store_result_a_time_start = time.time()
