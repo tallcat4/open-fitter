@@ -13,7 +13,7 @@ for _p in (_PARENT_DIR,):
 
 from algo_utils.find_containing_objects import find_containing_objects
 from algo_utils.mesh_topology_utils import find_vertices_near_faces
-from algo_utils.process_humanoid_vertex_groups import process_humanoid_vertex_groups
+from algo_utils.vertex_group_utils import process_humanoid_vertex_groups
 from blender_utils.armature_utils import (
     restore_armature_modifier,
     set_armature_modifier_target_armature,
