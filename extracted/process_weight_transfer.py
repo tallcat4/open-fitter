@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import math
 import time
-from collections import defaultdict, deque
+from collections import deque
 
 import bmesh
 import bpy
@@ -17,7 +17,6 @@ from apply_distance_normal_based_smoothing import apply_distance_normal_based_sm
 from blender_utils.adjust_hand_weights import adjust_hand_weights
 from blender_utils.build_bone_maps import build_bone_maps
 from blender_utils.create_blendshape_mask import create_blendshape_mask
-from blender_utils.get_evaluated_mesh import get_evaluated_mesh
 from blender_utils.get_vertex_weight_safe import get_vertex_weight_safe
 from blender_utils.merge_weights_to_parent import merge_weights_to_parent
 from blender_utils.propagate_weights_to_side_vertices import (
@@ -32,10 +31,7 @@ from io_utils.restore_shape_key_state import restore_shape_key_state
 from io_utils.restore_weights import restore_weights
 from io_utils.save_shape_key_state import save_shape_key_state
 from io_utils.store_weights import store_weights
-from math_utils.create_distance_falloff_transfer_mask import (
-    create_distance_falloff_transfer_mask,
-)
-from scipy.spatial import cKDTree
+from stages.compute_non_humanoid_masks import compute_non_humanoid_masks
 
 
 class WeightTransferContext:
@@ -496,189 +492,7 @@ class WeightTransferContext:
         print(f"  微小ウェイト除外: {cleanup_weights_time:.2f}秒")
 
     def compute_non_humanoid_masks(self):
-        self.new_groups = set(vg.name for vg in self.target_obj.vertex_groups)
-        self.added_groups = self.new_groups - self.original_groups
-
-        print(f"  ボーングループ: {self.bone_groups}")
-        print(f"  オリジナルグループ: {self.original_groups}")
-        print(f"  新規グループ: {self.new_groups}")
-        print(f"  追加グループ: {self.added_groups}")
-
-        num_vertices = len(self.target_obj.data.vertices)
-        all_transferred_weights = store_weights(self.target_obj, self.all_deform_groups)
-
-        clothing_bone_to_humanoid = {bone_map["boneName"]: bone_map["humanoidBoneName"] for bone_map in self.clothing_avatar_data["humanoidBones"]}
-        clothing_bone_to_parent_humanoid = {}
-        for clothing_bone in self.clothing_armature.data.bones:
-            current_bone = clothing_bone
-            current_bone_name = current_bone.name
-            parent_humanoid_name = None
-            while current_bone:
-                if current_bone.name in clothing_bone_to_humanoid:
-                    parent_humanoid_name = clothing_bone_to_humanoid[current_bone.name]
-                    break
-                current_bone = current_bone.parent
-            print(f"current_bone_name: {current_bone_name}, parent_humanoid_name: {parent_humanoid_name}")
-            if parent_humanoid_name:
-                clothing_bone_to_parent_humanoid[current_bone_name] = parent_humanoid_name
-
-        self.non_humanoid_parts_mask = np.zeros(num_vertices)
-        self.non_humanoid_total_weights = np.zeros(num_vertices)
-        for vert_idx, groups in self.original_non_humanoid_weights.items():
-            total_weight = sum(groups.values())
-            if total_weight > 1.0:
-                total_weight = 1.0
-            self.non_humanoid_total_weights[vert_idx] = total_weight
-            if total_weight > 0.999:
-                self.non_humanoid_parts_mask[vert_idx] = 1.0
-
-        transferred_weight_patterns = [None] * num_vertices
-        for vert_idx in range(num_vertices):
-            groups = all_transferred_weights.get(vert_idx, {})
-            converted_weights = defaultdict(float)
-            for group_name, weight in groups.items():
-                if weight <= 0.0:
-                    continue
-                if group_name in self.auxiliary_bones_to_humanoid:
-                    humanoid_name = self.auxiliary_bones_to_humanoid[group_name]
-                    if humanoid_name:
-                        converted_weights[humanoid_name] += weight
-                else:
-                    humanoid_name = self.bone_to_humanoid.get(group_name)
-                    if humanoid_name:
-                        converted_weights[humanoid_name] += weight
-                    else:
-                        converted_weights[group_name] += weight
-            transferred_weight_patterns[vert_idx] = dict(converted_weights)
-
-        original_non_humanoid_weight_patterns = [None] * num_vertices
-        for vert_idx in range(num_vertices):
-            groups = self.original_non_humanoid_weights.get(vert_idx, {})
-            converted_weights = defaultdict(float)
-            for group_name, weight in groups.items():
-                if weight <= 0.0:
-                    continue
-                parent_humanoid = clothing_bone_to_parent_humanoid.get(group_name)
-                if parent_humanoid:
-                    converted_weights[parent_humanoid] += weight
-                else:
-                    converted_weights[group_name] += weight
-            original_non_humanoid_weight_patterns[vert_idx] = dict(converted_weights)
-
-        cloth_bm = get_evaluated_mesh(self.target_obj)
-        cloth_bm.verts.ensure_lookup_table()
-        cloth_bm.faces.ensure_lookup_table()
-        vertex_coords = np.array([v.co for v in cloth_bm.verts])
-
-        pattern_difference_threshold = 0.2
-        neighbor_search_radius = 0.005
-        self.non_humanoid_difference_mask = np.zeros_like(self.non_humanoid_parts_mask)
-
-        hinge_bone_mask = np.zeros_like(self.non_humanoid_parts_mask)
-        hinge_group = self.target_obj.vertex_groups.get("HingeBone")
-        if hinge_group:
-            for vert_idx in range(num_vertices):
-                for g in self.target_obj.data.vertices[vert_idx].groups:
-                    if g.group == hinge_group.index and g.weight > 0.001:
-                        hinge_bone_mask[vert_idx] = 1.0
-                        break
-
-        if num_vertices > 0:
-            kd_tree = cKDTree(vertex_coords)
-
-            def calculate_pattern_difference(weights_a, weights_b):
-                if not weights_a and not weights_b:
-                    return 0.0
-                keys = set(weights_a.keys()) | set(weights_b.keys())
-                difference = 0.0
-                for key in keys:
-                    difference += abs(weights_a.get(key, 0.0) - weights_b.get(key, 0.0))
-                return difference
-
-            for vert_idx, mask_value in enumerate(self.non_humanoid_parts_mask):
-                if mask_value <= 0.0:
-                    continue
-                base_pattern = original_non_humanoid_weight_patterns[vert_idx]
-                neighbor_indices = kd_tree.query_ball_point(vertex_coords[vert_idx], neighbor_search_radius)
-                for neighbor_idx in neighbor_indices:
-                    if neighbor_idx == vert_idx:
-                        continue
-                    if self.non_humanoid_parts_mask[neighbor_idx] > 0.001:
-                        continue
-                    neighbor_pattern = transferred_weight_patterns[neighbor_idx]
-                    if not neighbor_pattern:
-                        continue
-                    difference = calculate_pattern_difference(base_pattern, neighbor_pattern)
-                    if difference > pattern_difference_threshold:
-                        self.non_humanoid_difference_mask[vert_idx] = 1.0 * hinge_bone_mask[vert_idx] * hinge_bone_mask[vert_idx]
-                        break
-
-        self.non_humanoid_difference_group = self.target_obj.vertex_groups.new(name="NonHumanoidDifference")
-        for vert_idx, mask_value in enumerate(self.non_humanoid_difference_mask):
-            if mask_value > 0.0:
-                self.non_humanoid_difference_group.add([vert_idx], 1.0, "REPLACE")
-
-        current_mode = bpy.context.object.mode
-        bpy.context.view_layer.objects.active = self.target_obj
-        bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
-        self.target_obj.vertex_groups.active_index = self.non_humanoid_difference_group.index
-        bpy.ops.paint.vert_select_all(action="SELECT")
-        bpy.ops.object.vertex_group_smooth(factor=0.5, repeat=5, expand=0.5)
-
-        falloff_mask_time_start = time.time()
-        sway_settings = self.base_avatar_data.get("commonSwaySettings", {"startDistance": 0.025, "endDistance": 0.050})
-        self.distance_falloff_group = create_distance_falloff_transfer_mask(
-            self.target_obj,
-            self.base_avatar_data,
-            "DistanceFalloffMask",
-            max_distance=sway_settings["endDistance"],
-            min_distance=sway_settings["startDistance"],
-        )
-        self.target_obj.vertex_groups.active_index = self.distance_falloff_group.index
-        bpy.ops.object.vertex_group_smooth(factor=1, repeat=3, expand=0.1)
-        falloff_mask_time = time.time() - falloff_mask_time_start
-        print(f"  距離フォールオフマスク作成: {falloff_mask_time:.2f}秒")
-
-        self.distance_falloff_group2 = create_distance_falloff_transfer_mask(
-            self.target_obj,
-            self.base_avatar_data,
-            "DistanceFalloffMask2",
-            max_distance=0.1,
-            min_distance=0.04,
-        )
-        self.target_obj.vertex_groups.active_index = self.distance_falloff_group2.index
-        bpy.ops.object.vertex_group_smooth(factor=1, repeat=3, expand=0.1)
-        print(f"  distance_falloff_group2: {self.distance_falloff_group2.index}")
-
-        bpy.ops.object.mode_set(mode=current_mode)
-
-        non_humanoid_difference_weights = np.zeros(num_vertices)
-        distance_falloff_weights = np.zeros(num_vertices)
-        for vert_idx in range(num_vertices):
-            for g in self.target_obj.data.vertices[vert_idx].groups:
-                if g.group == self.non_humanoid_difference_group.index:
-                    non_humanoid_difference_weights[vert_idx] = g.weight
-                if g.group == self.distance_falloff_group2.index:
-                    distance_falloff_weights[vert_idx] = g.weight
-
-        for vert_idx, groups in self.original_non_humanoid_weights.items():
-            for group_name, weight in groups.items():
-                if group_name in self.target_obj.vertex_groups:
-                    result_weight = weight * (1.0 - non_humanoid_difference_weights[vert_idx] * distance_falloff_weights[vert_idx])
-                    self.target_obj.vertex_groups[group_name].add([vert_idx], result_weight, "REPLACE")
-
-        current_humanoid_weights = store_weights(self.target_obj, self.bone_groups)
-        for vert_idx, groups in current_humanoid_weights.items():
-            for group_name, weight in groups.items():
-                if group_name in self.target_obj.vertex_groups:
-                    factor = 1.0 - self.non_humanoid_total_weights[vert_idx] * (1.0 - non_humanoid_difference_weights[vert_idx] * distance_falloff_weights[vert_idx])
-                    result_weight = weight * factor
-                    self.target_obj.vertex_groups[group_name].add([vert_idx], result_weight, "REPLACE")
-
-        for vert_idx in range(len(self.non_humanoid_total_weights)):
-            self.non_humanoid_total_weights[vert_idx] = self.non_humanoid_total_weights[vert_idx] * (1.0 - non_humanoid_difference_weights[vert_idx] * distance_falloff_weights[vert_idx])
-
-        cloth_bm.free()
+        compute_non_humanoid_masks(self)
 
     def merge_added_groups(self):
         group_merge_time_start = time.time()
