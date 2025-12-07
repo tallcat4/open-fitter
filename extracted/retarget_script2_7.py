@@ -6,7 +6,7 @@ import argparse
 
 import bpy
 from parse_args import parse_args
-from process_single_config import process_single_config
+from process_single_config import OutfitRetargetPipeline
 
 
 def main():
@@ -53,7 +53,10 @@ def main():
                 pair_args = argparse.Namespace(**vars(args))
                 pair_args.output = output_file
                 
-                success = process_single_config(pair_args, config_pair, pair_index, total_pairs, start_time)
+                pipeline = OutfitRetargetPipeline(
+                    pair_args, config_pair, pair_index, total_pairs, start_time
+                )
+                success = pipeline.execute()
                 if success:
                     successful_pairs += 1
                     print(f"✓ ペア {pair_index + 1} 正常完了: {output_file}")

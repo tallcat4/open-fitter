@@ -11,8 +11,8 @@ from stages.template_adjustment import TemplateAdjustmentStage
 from stages.weight_transfer import WeightTransferStage
 
 
-class ClothingRetargetPipeline:
-    """衣装リターゲティングパイプライン
+class OutfitRetargetPipeline:
+    """衣装リターゲティングパイプライン (OutfitRetargetingSystem のコア処理)
     
     ベースアバターから衣装メッシュへウェイト・形状・ポーズを転送し、
     最終的なFBXファイルを出力する。
@@ -46,12 +46,12 @@ class ClothingRetargetPipeline:
         object.__setattr__(self, 'ctx', ProcessingContext())
 
     def __getattr__(self, name):
-        if name in ClothingRetargetPipeline._CTX_ATTRS:
+        if name in OutfitRetargetPipeline._CTX_ATTRS:
             return getattr(self.ctx, name)
         raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
 
     def __setattr__(self, name, value):
-        if name in ClothingRetargetPipeline._CTX_ATTRS:
+        if name in OutfitRetargetPipeline._CTX_ATTRS:
             setattr(self.ctx, name, value)
         else:
             object.__setattr__(self, name, value)
@@ -104,10 +104,11 @@ class ClothingRetargetPipeline:
 
 
 # 後方互換性のためのエイリアス
-SingleConfigProcessor = ClothingRetargetPipeline
+SingleConfigProcessor = OutfitRetargetPipeline
+ClothingRetargetPipeline = OutfitRetargetPipeline
 
 
 def process_single_config(args, config_pair, pair_index, total_pairs, overall_start_time):
-    """後方互換性のためのラッパー関数。ClothingRetargetPipelineを直接使用することを推奨。"""
-    pipeline = ClothingRetargetPipeline(args, config_pair, pair_index, total_pairs, overall_start_time)
+    """後方互換性のためのラッパー関数。OutfitRetargetPipelineを直接使用することを推奨。"""
+    pipeline = OutfitRetargetPipeline(args, config_pair, pair_index, total_pairs, overall_start_time)
     return pipeline.execute()
