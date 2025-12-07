@@ -33,9 +33,16 @@ class BoneReplacementStage:
     def run(self):
         p = self.pipeline
         time = p.time_module
+        is_final_pair = (p.pair_index == p.total_pairs - 1)
 
         print("Status: ヒューマノイドボーン置換中")
         print(f"Progress: {(p.pair_index + 0.95) / p.total_pairs * 0.9:.3f}")
+
+        # 中間pairではボーン置換をスキップ（base_armatureがNone）
+        if not is_final_pair:
+            print("=== PoC: 中間pairのためボーン置換をスキップ ===")
+            p.bones_replace_time = time.time()
+            return
 
         # ベースポーズファイルパスの取得
         base_pose_filepath = None
@@ -47,7 +54,7 @@ class BoneReplacementStage:
                 )
                 base_pose_filepath = os.path.join(pose_dir, base_pose_filepath)
 
-        # ヒューマノイドボーン置換
+        # ヒューマノイドボーン置換（最終pairのみ）
         if p.pair_index == 0:
             replace_humanoid_bones(
                 p.base_armature,

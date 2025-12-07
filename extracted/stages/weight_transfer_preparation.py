@@ -56,13 +56,18 @@ class WeightTransferPreparationStage:
     def run(self):
         p = self.pipeline
         time = p.time_module
+        is_final_pair = (p.pair_index == p.total_pairs - 1)
 
-        # ベースメッシュ複製
-        right_base_mesh, left_base_mesh = duplicate_mesh_with_partial_weights(
-            p.base_mesh, p.base_avatar_data
-        )
-        duplicate_time = time.time()
-        print(f"ベースメッシュ複製: {duplicate_time - p.cycle1_end_time:.2f}秒")
+        # ベースメッシュ複製（最終pairのみ - base_meshが必要）
+        if is_final_pair:
+            right_base_mesh, left_base_mesh = duplicate_mesh_with_partial_weights(
+                p.base_mesh, p.base_avatar_data
+            )
+            duplicate_time = time.time()
+            print(f"ベースメッシュ複製: {duplicate_time - p.cycle1_end_time:.2f}秒")
+        else:
+            print("=== PoC: 中間pairのためベースメッシュ複製をスキップ ===")
+            duplicate_time = time.time()
 
         # 包含関係検出
         print("Status: メッシュの包含関係検出中")
@@ -79,16 +84,23 @@ class WeightTransferPreparationStage:
         print(f"Progress: {(p.pair_index + 0.55) / p.total_pairs * 0.9:.3f}")
         cycle2_pre_start = time.time()
 
-        # ボーンデータ準備
-        self._apply_sub_bone_data(p)
+        # ボーンデータ準備（最終pairのみ）
+        if is_final_pair:
+            self._apply_sub_bone_data(p)
+        else:
+            p.original_humanoid_bones = None
+            p.original_auxiliary_bones = None
 
-        # Template固有の頂点グループ処理
-        self._apply_template_vertex_groups(p)
+        # Template固有の頂点グループ処理（最終pairのみ - base_meshが必要）
+        if is_final_pair:
+            self._apply_template_vertex_groups(p)
+        else:
+            print("=== PoC: 中間pairのためTemplate頂点グループ処理をスキップ ===")
 
         # 各メッシュの前処理
         p.armature_settings_dict = {}
         for obj in p.clothing_meshes:
-            self._preprocess_mesh(obj, p, time)
+            self._preprocess_mesh(obj, p, time, is_final_pair)
 
         cycle2_pre_end = time.time()
         print(f"サイクル2前処理全体: {cycle2_pre_end - cycle2_pre_start:.2f}秒")
@@ -197,7 +209,7 @@ class WeightTransferPreparationStage:
             for obj in p.clothing_meshes:
                 transfer_weights_from_nearest_vertex(p.base_mesh, obj, inpaint_group_name)
 
-    def _preprocess_mesh(self, obj, p, time):
+    def _preprocess_mesh(self, obj, p, time, is_final_pair):
         """単一メッシュの前処理"""
         obj_start = time.time()
         print("cycle2 (pre-weight transfer) " + obj.name)
@@ -211,26 +223,31 @@ class WeightTransferPreparationStage:
             obj, p.clothing_armature, p.clothing_avatar_data, p.is_A_pose
         )
 
-        # 欠損ボーンウェイト処理
-        process_missing_bone_weights(
-            obj,
-            p.base_armature,
-            p.clothing_avatar_data,
-            p.base_avatar_data,
-            preserve_optional_humanoid_bones=False,
-        )
+        # 以下は最終pairでのみ実行（base_armatureが必要）
+        if is_final_pair:
+            # 欠損ボーンウェイト処理
+            process_missing_bone_weights(
+                obj,
+                p.base_armature,
+                p.clothing_avatar_data,
+                p.base_avatar_data,
+                preserve_optional_humanoid_bones=False,
+            )
 
-        # ヒューマノイド頂点グループ処理
-        process_humanoid_vertex_groups(
-            obj,
-            p.clothing_armature,
-            p.base_avatar_data,
-            p.clothing_avatar_data,
-        )
+            # ヒューマノイド頂点グループ処理
+            process_humanoid_vertex_groups(
+                obj,
+                p.clothing_armature,
+                p.base_avatar_data,
+                p.clothing_avatar_data,
+            )
 
-        # アーマチュア設定復元・切り替え
-        restore_armature_modifier(obj, p.armature_settings_dict[obj])
-        set_armature_modifier_visibility(obj, False, False)
-        set_armature_modifier_target_armature(obj, p.base_armature)
+            # アーマチュア設定復元・切り替え
+            restore_armature_modifier(obj, p.armature_settings_dict[obj])
+            set_armature_modifier_visibility(obj, False, False)
+            set_armature_modifier_target_armature(obj, p.base_armature)
+        else:
+            # 中間pair: アーマチュア設定復元のみ
+            restore_armature_modifier(obj, p.armature_settings_dict[obj])
 
         print(f"  {obj.name}の前処理: {time.time() - obj_start:.2f}秒")

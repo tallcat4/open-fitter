@@ -35,18 +35,18 @@ def process_mesh_with_connected_components_inline(obj, field_data_path, blend_sh
     # オブジェクト名を保存
     original_name = obj.name
 
-    # 素体メッシュを取得
+    # 素体メッシュを取得（存在しない場合は距離ウェイト計算をスキップ）
     base_obj = bpy.data.objects.get("Body.BaseAvatar")
-    if not base_obj:
-        raise Exception("Base avatar mesh (Body.BaseAvatar) not found")
-
-    calculate_distance_based_weights(
-        source_obj_name=original_name,
-        target_obj_name=base_obj.name,
-        vertex_group_name="DistanceWeight",
-        min_distance=0.0,
-        max_distance=0.1
-    )
+    if base_obj:
+        calculate_distance_based_weights(
+            source_obj_name=original_name,
+            target_obj_name=base_obj.name,
+            vertex_group_name="DistanceWeight",
+            min_distance=0.0,
+            max_distance=0.1
+        )
+    else:
+        print("=== PoC: Body.BaseAvatarが存在しないため距離ウェイト計算をスキップ ===")
     
     # 連結成分を分離（アーマチュア設定等も保持）
     separated_objects, non_separated_objects = separate_and_combine_components(obj, clothing_armature, clustering=True)
@@ -91,8 +91,8 @@ def process_mesh_with_connected_components_inline(obj, field_data_path, blend_sh
 
         print(f"Component {sep_obj.name} OBB: \n {obb}")
         
-        # 素体メッシュとOBBの交差をチェック
-        if check_mesh_obb_intersection(base_obj, obb):
+        # 素体メッシュとOBBの交差をチェック（base_objが存在する場合のみ）
+        if base_obj and check_mesh_obb_intersection(base_obj, obb):
             print(f"Component {sep_obj.name} intersects with base mesh, will not be separated")
             do_not_separate.append(sep_obj.name)
         

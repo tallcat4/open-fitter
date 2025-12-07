@@ -41,6 +41,7 @@ class AssetLoadingStage:
     def run(self):
         p = self.pipeline
         time = p.time_module
+        is_final_pair = (p.pair_index == p.total_pairs - 1)
 
         # ベースBlendファイル読み込み
         print("Status: ベースファイル読み込み中")
@@ -49,17 +50,25 @@ class AssetLoadingStage:
         base_load_time = time.time()
         print(f"ベースファイル読み込み: {base_load_time - p.start_time:.2f}秒")
 
-        # ベースアバター処理
+        # ベースアバター処理（最終pairのみFBXをロード、中間pairはavatar_dataのみ）
         print("Status: ベースアバター処理中")
         print(f"Progress: {(p.pair_index + 0.1) / p.total_pairs * 0.9:.3f}")
-        (
-            p.base_mesh,
-            p.base_armature,
-            p.base_avatar_data,
-        ) = process_base_avatar(
-            p.config_pair['base_fbx'],
-            p.config_pair['base_avatar_data'],
-        )
+        if is_final_pair:
+            (
+                p.base_mesh,
+                p.base_armature,
+                p.base_avatar_data,
+            ) = process_base_avatar(
+                p.config_pair['base_fbx'],
+                p.config_pair['base_avatar_data'],
+            )
+        else:
+            # 中間pair: avatar_dataのみロード、FBXはスキップ
+            print("=== PoC: 中間pairのためbase_fbxロードをスキップ ===")
+            from io_utils.io_utils import load_avatar_data
+            p.base_avatar_data = load_avatar_data(p.config_pair['base_avatar_data'])
+            p.base_mesh = None
+            p.base_armature = None
 
         # 衣装アバター処理
         print("Status: 衣装データ処理中")
