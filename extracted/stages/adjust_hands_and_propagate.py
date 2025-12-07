@@ -6,8 +6,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import time
 
-from blender_utils.adjust_hand_weights import adjust_hand_weights
-from blender_utils.propagate_weights_to_side_vertices import (
+from blender_utils.weight_processing_utils import adjust_hand_weights
+from blender_utils.weight_processing_utils import (
     propagate_weights_to_side_vertices,
 )
 

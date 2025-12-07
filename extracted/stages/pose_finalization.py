@@ -14,7 +14,7 @@ for _p in (_PARENT_DIR,):
 from blender_utils.mesh_utils import apply_all_transforms
 from blender_utils.apply_bone_field_delta import apply_bone_field_delta
 from blender_utils.armature_utils import apply_pose_as_rest
-from blender_utils.remove_propagated_weights import remove_propagated_weights
+from blender_utils.weight_processing_utils import remove_propagated_weights
 
 
 class PoseFinalizationStage:

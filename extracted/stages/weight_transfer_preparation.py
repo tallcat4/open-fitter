@@ -20,7 +20,7 @@ from blender_utils.armature_utils import (
     set_armature_modifier_visibility,
     store_armature_modifier_settings,
 )
-from blender_utils.process_missing_bone_weights import process_missing_bone_weights
+from blender_utils.weight_processing_utils import process_missing_bone_weights
 from blender_utils.transfer_weights_from_nearest_vertex import (
     transfer_weights_from_nearest_vertex,
 )

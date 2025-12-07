@@ -9,7 +9,7 @@ from collections import deque
 
 import bmesh
 from math_utils.weight_utils import get_vertex_weight_safe
-from blender_utils.merge_weights_to_parent import merge_weights_to_parent
+from blender_utils.weight_processing_utils import merge_weights_to_parent
 
 
 def merge_added_groups(context):

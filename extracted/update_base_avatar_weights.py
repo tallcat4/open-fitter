@@ -4,7 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import bpy
-from blender_utils.process_missing_bone_weights import process_missing_bone_weights
+from blender_utils.weight_processing_utils import process_missing_bone_weights
 
 
 def update_base_avatar_weights(base_mesh: bpy.types.Object, clothing_armature: bpy.types.Object,

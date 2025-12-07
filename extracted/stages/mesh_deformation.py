@@ -13,13 +13,13 @@ for _p in (_PARENT_DIR,):
 
 from algo_utils.vertex_group_utils import remove_empty_vertex_groups
 from blender_utils.create_deformation_mask import create_deformation_mask
-from blender_utils.merge_auxiliary_to_humanoid_weights import (
+from blender_utils.weight_processing_utils import (
     merge_auxiliary_to_humanoid_weights,
 )
-from blender_utils.process_bone_weight_consolidation import (
+from blender_utils.weight_processing_utils import (
     process_bone_weight_consolidation,
 )
-from blender_utils.propagate_bone_weights import propagate_bone_weights
+from blender_utils.weight_processing_utils import propagate_bone_weights
 from blender_utils.mesh_utils import reset_shape_keys
 from blender_utils.subdivision_utils import subdivide_breast_faces
 from blender_utils.subdivision_utils import subdivide_long_edges
