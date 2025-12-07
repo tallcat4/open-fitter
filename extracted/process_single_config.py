@@ -4,7 +4,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import bpy
 from processing_context import ProcessingContext
-from stages.asset_preparation import AssetPreparationStage
+from stages.asset_loading import AssetLoadingStage
+from stages.asset_normalization import AssetNormalizationStage
 from stages.mesh_preparation import MeshPreparationStage
 from stages.scene_finalization import SceneFinalizationStage
 from stages.template_adjustment import TemplateAdjustmentStage
@@ -18,11 +19,12 @@ class OutfitRetargetPipeline:
     最終的なFBXファイルを出力する。
     
     Stages:
-        1. AssetPreparation: アセット読み込み・初期化
-        2. TemplateAdjustment: Template固有補正（条件付き）
-        3. MeshPreparation: メッシュ変形・サイクル1
-        4. WeightTransfer: ウェイト転送・サイクル2
-        5. SceneFinalization: 仕上げ・FBXエクスポート
+        1. AssetLoading: ファイル読み込み・FBXインポート
+        2. AssetNormalization: アセット正規化・初期設定
+        3. TemplateAdjustment: Template固有補正（条件付き）
+        4. MeshPreparation: メッシュ変形・サイクル1
+        5. WeightTransfer: ウェイト転送・サイクル2
+        6. SceneFinalization: 仕上げ・FBXエクスポート
     """
     
     # ProcessingContextに委譲する属性のリスト
@@ -71,8 +73,10 @@ class OutfitRetargetPipeline:
 
             bpy.ops.object.mode_set(mode='OBJECT')
 
-            # ベース・衣装データの読み込みと初期準備
-            AssetPreparationStage(self).run()
+            # ファイル読み込み・FBXインポート
+            AssetLoadingStage(self).run()
+            # アセット正規化・初期設定
+            AssetNormalizationStage(self).run()
             # Template専用の調整処理
             if not TemplateAdjustmentStage(self).run():
                 return None
