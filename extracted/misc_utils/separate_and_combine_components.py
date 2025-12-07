@@ -11,7 +11,7 @@ from algo_utils.check_uniform_weights import check_uniform_weights
 from algo_utils.find_connected_components import find_connected_components
 from blender_utils.generate_weight_hash import generate_weight_hash
 from math_utils.calculate_component_size import calculate_component_size
-from math_utils.calculate_obb import calculate_obb
+from math_utils.obb_utils import calculate_obb
 from math_utils.cluster_components_by_adaptive_distance import (
     cluster_components_by_adaptive_distance,
 )

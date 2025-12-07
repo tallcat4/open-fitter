@@ -4,9 +4,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
-from apply_blendshape_operation_with_shape_key_name import (
-    apply_blendshape_operation_with_shape_key_name,
-)
+from blendshape_operation import apply_blendshape_operation_with_shape_key_name
 from blender_utils.create_blendshape_mask import create_blendshape_mask
 
 
