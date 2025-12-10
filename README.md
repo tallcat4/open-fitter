@@ -29,7 +29,7 @@ We are actively refactoring the core logic derived from the upstream GPL code. T
     *   **Modularization via AST**: Using Abstract Syntax Tree (AST) tools, the large-scale source file was subdivided into separate files per function and process to improve navigability. (Note: The current file granularity is high and subject to future consolidation.)
     *   **Streamlining**: Identified and removed approximately 50 isolated functions that are not currently required for this project's scope.
     *   **Pipeline Structured & Visualized**: Refactored several large-scale functions into structured classes and processing stages. This reorganization helps visualize the processing pipeline, making the logic easier to trace for developers.
-    *   **Removed Proprietary Dependency**: Removed the dependency on the proprietary `Template.fbx` file. Standard clothing fitting functionality appears to operate correctly without it, though we are monitoring for potential regressions in specific features.
+    *   **Removed Proprietary Dependency**: Removed the dependency on the proprietary `Template.fbx`, `avatar_data_template.json`, and `pose_basis_template.json` files. Standard clothing fitting functionality appears to operate correctly without them, though we are monitoring for potential regressions in specific features.
     *   **Optimization**: Applied performance optimizations alongside the refactoring process.
 
 ### Version Compatibility & Base Code
@@ -98,7 +98,7 @@ Upstreamより取得したコアロジックに対し、オープンソースコ
     *   **ASTによるモジュール化**: AST（抽象構文木）ベースのツールを使用し、大規模なソースファイルを関数・処理単位で個別のファイルへ分割しました。（現在は分割粒度が細かいため、今後の開発で適切な構成へ再統合していく予定です。）
     *   **コードの軽量化**: 現状使用されていない約50個の関数を特定し、削除することでコードベースを整理しました。
     *   **パイプラインの可視化**: 複数の大規模な関数をクラス化し、処理ステージごとに整理しました。これにより処理パイプラインの流れが可視化され、開発者がロジックを追いやすくなりました。
-    *   **プロプライエタリ依存の排除**: プロプライエタリなデータである `Template.fbx` への依存を排除しました。一部機能への影響（デグレ）の可能性は残るものの、標準的な衣装の着せ替えにおいては問題なく動作しているように見受けられます。
+    *   **プロプライエタリ依存の排除**: プロプライエタリなデータである `Template.fbx`、`avatar_data_template.json`、`pose_basis_template.json` への依存を排除しました。一部機能への影響（デグレ）の可能性は残るものの、標準的な衣装の着せ替えにおいては問題なく動作しているように見受けられます。
     *   **処理の最適化**: リファクタリングの過程で、複数の処理に対し最適化を施しました。
 
 ### バージョン互換性とベースコードについて
