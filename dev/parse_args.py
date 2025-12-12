@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('--blend-shape-mappings', type=str, help='Semicolon-separated mappings of label,customName pairs')
     parser.add_argument('--name-conv', type=str, help='Path to bone name conversion JSON file')
     parser.add_argument('--mesh-renderers', type=str, help='Semicolon-separated list of meshObject,parentObject pairs')
+    parser.add_argument('--preserve-bone-names', action='store_true', help='Preserve original input FBX bone names in output (do not rename to target avatar bone names)')
     
     print(sys.argv)
     
@@ -287,6 +288,41 @@ def parse_args():
     
     # Store configuration pairs in args for later use
     args.config_pairs = config_pairs
+    
+    # --preserve-bone-namesが有効な場合、最初のペアのclothing_avatar_dataから
+    # 元のボーン名マッピングを作成して全ペアに共有
+    if args.preserve_bone_names and len(config_pairs) > 0:
+        first_clothing_avatar_data_path = config_pairs[0]['clothing_avatar_data']
+        try:
+            from io_utils.io_utils import load_avatar_data
+            first_clothing_avatar_data = load_avatar_data(first_clothing_avatar_data_path)
+            
+            # 元のボーン名マッピングを作成
+            original_bone_mapping = {
+                'humanoidBones': {
+                    b['humanoidBoneName']: b['boneName']
+                    for b in first_clothing_avatar_data.get('humanoidBones', [])
+                },
+                'auxiliaryBones': {}
+            }
+            # Auxiliaryボーンのマッピングも保存
+            for aux_set in first_clothing_avatar_data.get('auxiliaryBones', []):
+                humanoid_name = aux_set.get('humanoidBoneName')
+                aux_bones = aux_set.get('auxiliaryBones', [])
+                if humanoid_name:
+                    original_bone_mapping['auxiliaryBones'][humanoid_name] = aux_bones
+            
+            # 全ペアに共有
+            for pair in config_pairs:
+                pair['original_bone_mapping'] = original_bone_mapping
+            
+            print(f"[preserve-bone-names] Original bone mapping created from: {first_clothing_avatar_data_path}")
+            print(f"[preserve-bone-names] Humanoid bones: {len(original_bone_mapping['humanoidBones'])}")
+            print(f"[preserve-bone-names] Auxiliary bone groups: {len(original_bone_mapping['auxiliaryBones'])}")
+        except Exception as e:
+            print(f"Warning: Failed to create original bone mapping: {e}")
+            for pair in config_pairs:
+                pair['original_bone_mapping'] = None
             
     # Parse hips position if provided
     if args.hips_position:

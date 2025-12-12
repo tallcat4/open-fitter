@@ -374,6 +374,126 @@ def apply_bone_name_conversion(clothing_armature: bpy.types.Object, clothing_mes
             if fbx_bone in mesh_obj.vertex_groups:
                 vertex_group = mesh_obj.vertex_groups[fbx_bone]
                 vertex_group.name = prefab_bone
+def restore_original_bone_names(
+    clothing_armature: bpy.types.Object,
+    clothing_meshes: list,
+    base_avatar_data: dict,
+    original_bone_mapping: dict,
+) -> dict:
+    """
+    ボーン置換後のボーン名を、最初の入力FBXの元のボーン名に復元する。
+    humanoidBoneNameをキーにして、base_avatar_dataのボーン名から
+    original_bone_mappingのボーン名へリネームする。
+    
+    Parameters:
+        clothing_armature: 服のアーマチュアオブジェクト
+        clothing_meshes: 服のメッシュオブジェクトのリスト
+        base_avatar_data: ターゲットアバターのアバターデータ（現在のボーン名を含む）
+        original_bone_mapping: 最初の入力FBXから取得した元のボーン名マッピング
+            {
+                'humanoidBones': {humanoidBoneName: boneName, ...},
+                'auxiliaryBones': {humanoidBoneName: [aux_bone_names], ...}
+            }
+    
+    Returns:
+        dict: リネームされたボーンのマッピング {現在の名前: 元の名前}
+    """
+    if not original_bone_mapping:
+        print("[restore_original_bone_names] No original bone mapping provided")
+        return {}
+    
+    # original_bone_mappingから元のボーン名を取得
+    original_humanoid_to_bone = original_bone_mapping.get('humanoidBones', {})
+    original_aux_mapping = original_bone_mapping.get('auxiliaryBones', {})
+    
+    # base_avatar_dataから現在のボーン名を取得
+    base_humanoid_to_bone = {
+        b["humanoidBoneName"]: b["boneName"]
+        for b in base_avatar_data.get("humanoidBones", [])
+    }
+    
+    base_aux_mapping = {}  # humanoidBoneName -> [aux_bone_names]
+    for aux_set in base_avatar_data.get("auxiliaryBones", []):
+        humanoid_name = aux_set.get("humanoidBoneName")
+        aux_bones = aux_set.get("auxiliaryBones", [])
+        if humanoid_name:
+            base_aux_mapping[humanoid_name] = aux_bones
+    
+    # リネームマッピングを構築: 現在のボーン名 -> 元のボーン名
+    rename_mapping = {}
+    
+    # Humanoidボーンのマッピング
+    for humanoid_name, original_bone in original_humanoid_to_bone.items():
+        if humanoid_name in base_humanoid_to_bone:
+            current_bone = base_humanoid_to_bone[humanoid_name]
+            if current_bone != original_bone:
+                rename_mapping[current_bone] = original_bone
+    
+    # Auxiliaryボーンのマッピング（インデックスベースでマッチング）
+    for humanoid_name, original_aux_bones in original_aux_mapping.items():
+        if humanoid_name in base_aux_mapping:
+            base_aux = base_aux_mapping[humanoid_name]
+            for i, original_bone in enumerate(original_aux_bones):
+                if i < len(base_aux):
+                    current_bone = base_aux[i]
+                    if current_bone != original_bone:
+                        rename_mapping[current_bone] = original_bone
+    
+    if not rename_mapping:
+        print("[restore_original_bone_names] No bones to rename")
+        return {}
+    
+    print(f"[restore_original_bone_names] Renaming {len(rename_mapping)} bones")
+    
+    # 1. アーマチュアのボーン名を変更
+    renamed_bones = {}
+    if clothing_armature and clothing_armature.type == 'ARMATURE':
+        bpy.context.view_layer.objects.active = clothing_armature
+        bpy.ops.object.mode_set(mode='EDIT')
+        
+        # 名前の衝突を避けるため、一時的な名前に変更してから最終名前に変更
+        temp_names = {}
+        for current_name, original_name in rename_mapping.items():
+            if current_name in clothing_armature.data.edit_bones:
+                temp_name = f"__temp_rename_{current_name}"
+                edit_bone = clothing_armature.data.edit_bones[current_name]
+                edit_bone.name = temp_name
+                temp_names[temp_name] = original_name
+        
+        # 一時名から最終名へ
+        for temp_name, original_name in temp_names.items():
+            if temp_name in clothing_armature.data.edit_bones:
+                edit_bone = clothing_armature.data.edit_bones[temp_name]
+                edit_bone.name = original_name
+                renamed_bones[temp_name.replace("__temp_rename_", "")] = original_name
+                print(f"  Bone renamed: {temp_name.replace('__temp_rename_', '')} -> {original_name}")
+        
+        bpy.ops.object.mode_set(mode='OBJECT')
+    
+    # 2. メッシュの頂点グループ名を変更
+    for mesh_obj in clothing_meshes:
+        if not mesh_obj or mesh_obj.type != 'MESH':
+            continue
+        
+        # 一時名に変更
+        temp_groups = {}
+        for current_name, original_name in rename_mapping.items():
+            if current_name in mesh_obj.vertex_groups:
+                temp_name = f"__temp_rename_{current_name}"
+                vertex_group = mesh_obj.vertex_groups[current_name]
+                vertex_group.name = temp_name
+                temp_groups[temp_name] = original_name
+        
+        # 最終名に変更
+        for temp_name, original_name in temp_groups.items():
+            if temp_name in mesh_obj.vertex_groups:
+                vertex_group = mesh_obj.vertex_groups[temp_name]
+                vertex_group.name = original_name
+    
+    print(f"[restore_original_bone_names] Completed: {len(renamed_bones)} bones renamed")
+    return renamed_bones
+
+
 # Merged from bone_side_utils.py
 
 def is_left_side_bone(bone_name: str, humanoid_name: str = None) -> bool:

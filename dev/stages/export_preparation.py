@@ -19,6 +19,7 @@ from blender_utils.blendshape_utils import (
     merge_and_clean_generated_shapekeys,
 )
 from blender_utils.bone_utils import round_bone_coordinates
+from blender_utils.bone_utils import restore_original_bone_names
 from blender_utils.blendshape_utils import set_highheel_shapekey_values
 from io_utils.io_utils import export_fbx
 from io_utils.io_utils import update_cloth_metadata
@@ -155,6 +156,20 @@ class ExportPreparationStage:
 
     def _export_fbx(self, p, time):
         """FBXエクスポート"""
+        # ボーン名復元（--preserve-bone-namesが有効な場合）
+        if getattr(p.args, 'preserve_bone_names', False):
+            original_bone_mapping = p.config_pair.get('original_bone_mapping')
+            if original_bone_mapping:
+                print("[ExportPreparation] Restoring original bone names from first input FBX...")
+                restore_original_bone_names(
+                    p.clothing_armature,
+                    p.clothing_meshes,
+                    p.base_avatar_data,
+                    original_bone_mapping,
+                )
+            else:
+                print("[ExportPreparation] Warning: original_bone_mapping not found, skipping bone name restoration")
+        
         # オブジェクト選択
         bpy.ops.object.select_all(action='DESELECT')
         for obj in bpy.data.objects:
