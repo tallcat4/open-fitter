@@ -374,6 +374,8 @@ def apply_bone_name_conversion(clothing_armature: bpy.types.Object, clothing_mes
             if fbx_bone in mesh_obj.vertex_groups:
                 vertex_group = mesh_obj.vertex_groups[fbx_bone]
                 vertex_group.name = prefab_bone
+
+
 def restore_original_bone_names(
     clothing_armature: bpy.types.Object,
     clothing_meshes: list,

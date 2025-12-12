@@ -9,6 +9,36 @@ from mathutils import Vector
 from process_blendshape_transitions import process_blendshape_transitions
 
 
+def _create_original_bone_mapping(avatar_data: dict) -> dict:
+    """
+    アバターデータから元のボーン名マッピングを作成する。
+    
+    Parameters:
+        avatar_data: アバターデータ（humanoidBonesとauxiliaryBonesを含む）
+    
+    Returns:
+        dict: {
+            'humanoidBones': {humanoidBoneName: boneName, ...},
+            'auxiliaryBones': {humanoidBoneName: [aux_bone_names], ...}
+        }
+    """
+    mapping = {
+        'humanoidBones': {
+            b['humanoidBoneName']: b['boneName']
+            for b in avatar_data.get('humanoidBones', [])
+        },
+        'auxiliaryBones': {}
+    }
+    
+    for aux_set in avatar_data.get('auxiliaryBones', []):
+        humanoid_name = aux_set.get('humanoidBoneName')
+        aux_bones = aux_set.get('auxiliaryBones', [])
+        if humanoid_name:
+            mapping['auxiliaryBones'][humanoid_name] = aux_bones
+    
+    return mapping
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     
@@ -296,21 +326,7 @@ def parse_args():
         try:
             from io_utils.io_utils import load_avatar_data
             first_clothing_avatar_data = load_avatar_data(first_clothing_avatar_data_path)
-            
-            # 元のボーン名マッピングを作成
-            original_bone_mapping = {
-                'humanoidBones': {
-                    b['humanoidBoneName']: b['boneName']
-                    for b in first_clothing_avatar_data.get('humanoidBones', [])
-                },
-                'auxiliaryBones': {}
-            }
-            # Auxiliaryボーンのマッピングも保存
-            for aux_set in first_clothing_avatar_data.get('auxiliaryBones', []):
-                humanoid_name = aux_set.get('humanoidBoneName')
-                aux_bones = aux_set.get('auxiliaryBones', [])
-                if humanoid_name:
-                    original_bone_mapping['auxiliaryBones'][humanoid_name] = aux_bones
+            original_bone_mapping = _create_original_bone_mapping(first_clothing_avatar_data)
             
             # 全ペアに共有
             for pair in config_pairs:
@@ -323,7 +339,7 @@ def parse_args():
             print(f"Warning: Failed to create original bone mapping: {e}")
             for pair in config_pairs:
                 pair['original_bone_mapping'] = None
-            
+
     # Parse hips position if provided
     if args.hips_position:
         try:
